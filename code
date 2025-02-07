@@ -1,0 +1,398 @@
+### Load Required Libraries
+library(Seurat)
+library(Matrix)
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(ComplexHeatmap)
+library(RColorBrewer)
+
+### Setting the working directory to load data
+setwd("/mnt/S7/data2/AIMED/sblim/Muhammad/pons_medulla/(ventrolateral_medulla)Schwalbe et al")
+rvlm <- readRDS("rvlmAllCells_no_unknowns_30PCs_03_06_2023.rds")
+
+### Addi1ng Metadata
+rvlm <- AddMetaData(rvlm, rep("Schwalbe et al.", 114805), col.name = "Study")
+rvlm <- AddMetaData(rvlm, rep("8-20 weeks", 114805), col.name = "Age")
+rvlm <- AddMetaData(rvlm, rep("Ventrolateral medulla", 114805), col.name = "Region")
+rvlm <- AddMetaData(rvlm, rep("Next-Seq", 114805), col.name = "Technology")
+rvlm <- AddMetaData(rvlm, rep("C57BL/6J", 114805), col.name = "Strain")
+rvlm <- AddMetaData(rvlm, rep("Both", 114805), col.name = "Sex")
+
+### Plot and Save Data
+DimPlot(rvlm, reduction = "umap", group.by = "Sex", raster=FALSE)
+saveRDS(rvlm, file = "Schwalbe_et_al_2024_Mouse_VLM_Seurat.rds")
+
+### Load Additional Datasets
+setwd("/mnt/S7/data2/AIMED/sblim/Muhammad/pons_medulla/GSE168737")
+untar("GSE168737_RAW.tar", exdir = "GSE168737_RAW")
+
+# Load Data
+seurat_objs <- list(
+  adlib1 = CreateSeuratObject(Read10X_h5("GSE168737_RAW/GSM5163373_nts-adlib1.h5"), project = "nts_adlib1"),
+  adlib2 = CreateSeuratObject(Read10X_h5("GSE168737_RAW/GSM5163374_nts-adlib2.h5"), project = "nts_adlib2"),
+  fast1 = CreateSeuratObject(Read10X_h5("GSE168737_RAW/GSM5163375_nts-fast1.h5"), project = "nts_fast1"),
+  fast2 = CreateSeuratObject(Read10X_h5("GSE168737_RAW/GSM5163376_nts-fast2.h5"), project = "nts_fast2")
+)
+
+# Merge Datasets
+seurat_GSE168737 <- Reduce(function(x, y) merge(x, y), seurat_objs)
+
+# Add Metadata
+seurat_GSE168737 <- AddMetaData(seurat_GSE168737, rep("GSE168737", 16912), col.name = "Study")
+seurat_GSE168737 <- AddMetaData(seurat_GSE168737, rep("6-8 weeks", 16912), col.name = "Age")
+seurat_GSE168737 <- AddMetaData(seurat_GSE168737, rep("NTS", 16912), col.name = "Region")
+seurat_GSE168737 <- AddMetaData(seurat_GSE168737, rep("NovaSeq", 16912), col.name = "Technology")
+seurat_GSE168737 <- AddMetaData(seurat_GSE168737, rep("C57BL/6J", 16912), col.name = "Strain")
+seurat_GSE168737 <- AddMetaData(seurat_GSE168737, rep("Male", 16912), col.name = "Sex")
+
+# Save Processed Data
+saveRDS(seurat_GSE168737, file = "GSE168737.rds")
+
+############################
+############################
+################################
+setwd("/mnt/S7/data2/AIMED/sblim/Muhammad/pons_medulla/GSE247602/medulla")
+
+untar("GSM7893476_Medulla_GFP_filtered_feature_bc_matrix.tar.gz", exdir = "./Medulla_GFP_A")
+untar("GSM7893490_Medulla_GFP_B_filtered_feature_bc_matrix.tar.gz", exdir = "./Medulla_GFP_B")
+untar("GSM7893494_Medulla_GFP_C_filtered_feature_bc_matrix.tar.gz", exdir = "./Medulla_GFP_C")
+
+untar("GSM7893477_Medullar_RFP_A_filtered_feature_bc_matrix.tar.gz", exdir = "./Medulla_RFP_A")
+untar("GSM7893491_Medulla_RFP_B_filtered_feature_bc_matrix.tar.gz", exdir = "./Medulla_RFP_B")
+untar("GSM7893495_Medulla_RFP_C_filtered_feature_bc_matrix.tar.gz", exdir = "./Medulla_RFP_C")
+
+
+GFP_A <- Read10X(data.dir = "./Medulla_GFP_A")
+GFP_B <- Read10X(data.dir = "./Medulla_GFP_B")
+GFP_C <- Read10X(data.dir = "./Medulla_GFP_C")
+
+RFP_A <- Read10X(data.dir = "./Medulla_RFP_A")
+RFP_B <- Read10X(data.dir = "./Medulla_RFP_B")
+RFP_C <- Read10X(data.dir = "./Medulla_RFP_C")
+
+
+seurat_GFP_A <- CreateSeuratObject(counts = GFP_A, project = "Medulla_GFP_A")
+seurat_GFP_B <- CreateSeuratObject(counts = GFP_B, project = "Medulla_GFP_B")
+seurat_GFP_C <- CreateSeuratObject(counts = GFP_C, project = "Medulla_GFP_C")
+
+seurat_RFP_A <- CreateSeuratObject(counts = RFP_A, project = "Medulla_RFP_A")
+seurat_RFP_B <- CreateSeuratObject(counts = RFP_B, project = "Medulla_RFP_B")
+seurat_RFP_C <- CreateSeuratObject(counts = RFP_C, project = "Medulla_RFP_C")
+
+seurat_GFP <- merge(seurat_GFP_A, y = c(seurat_GFP_B, seurat_GFP_C), add.cell.ids = c("GFP_A", "GFP_B", "GFP_C"))
+seurat_RFP <- merge(seurat_RFP_A, y = c(seurat_RFP_B, seurat_RFP_C), add.cell.ids = c("RFP_A", "RFP_B", "RFP_C"))
+
+GSE247602_medulla <- merge(seurat_GFP, y = seurat_RFP, add.cell.ids = c("GFP", "RFP"))
+
+GSE247602_medulla[["percent.mt"]] <- PercentageFeatureSet(GSE247602_medulla, pattern = "^mt-")
+
+head(GSE247602_medulla@meta.data)
+
+GSE247602_medulla <- AddMetaData(GSE247602_medulla, rep(c("GSE247602_medulla"), 16740), col.name = "Study")
+GSE247602_medulla <- AddMetaData(GSE247602_medulla, rep(c("P42-56"), 16740), col.name = "Age")
+GSE247602_medulla <- AddMetaData(GSE247602_medulla, rep(c("Medulla"), 16740), col.name = "Region")
+GSE247602_medulla <- AddMetaData(GSE247602_medulla, rep(c("NovaSeq"), 16740), col.name = "Technology")
+GSE247602_medulla <- AddMetaData(GSE247602_medulla, rep(c("C57BL/6J"), 16740), col.name = "Strain")
+GSE247602_medulla <- AddMetaData(GSE247602_medulla, rep(c("Both"), 16740), col.name = "Sex")
+
+
+saveRDS(GSE247602_medulla, file = "GSE247602_medulla.rds")
+
+
+#########################
+setwd("/mnt/S7/data2/AIMED/sblim/Muhammad/pons_medulla/GSE247602/pons")
+
+untar("GSM7893474_Pons_GFP_filtered_feature_bc_matrix.tar.gz", exdir = "./Pons_GFP_A")
+untar("GSM7893488_Pons_GFP_2_raw_feature_bc_matrix.tar.gz", exdir = "./Pons_GFP_B")
+untar("GSM7893492_Pons_GFP_C_filtered_feature_bc_matrix.tar.gz", exdir = "./Pons_GFP_C")
+
+untar("GSM7893475_Pons_RFP_filtered_feature_bc_matrix.tar.gz", exdir = "./Pons_RFP_A")
+untar("GSM7893489_Pons_RFP_B_filtered_feature_bc_matrix.tar.gz", exdir = "./Pons_RFP_B")
+untar("GSM7893493_Pons_RFP_C_filtered_feature_bc_matrix.tar.gz", exdir = "./Pons_RFP_C")
+
+GFP_A_pons <- Read10X(data.dir = "./Pons_GFP_A")
+GFP_B_pons <- Read10X(data.dir = "./Pons_GFP_B")
+GFP_C_pons <- Read10X(data.dir = "./Pons_GFP_C")
+
+RFP_A_pons <- Read10X(data.dir = "./Pons_RFP_A")
+RFP_B_pons <- Read10X(data.dir = "./Pons_RFP_B")
+RFP_C_pons <- Read10X(data.dir = "./Pons_RFP_C")
+
+seurat_GFP_A_pons <- CreateSeuratObject(counts = GFP_A_pons, project = "Pons_GFP_A")
+seurat_GFP_B_pons <- CreateSeuratObject(counts = GFP_B_pons, project = "Pons_GFP_B")
+seurat_GFP_C_pons <- CreateSeuratObject(counts = GFP_C_pons, project = "Pons_GFP_C")
+
+seurat_RFP_A_pons <- CreateSeuratObject(counts = RFP_A_pons, project = "Pons_RFP_A")
+seurat_RFP_B_pons <- CreateSeuratObject(counts = RFP_B_pons, project = "Pons_RFP_B")
+seurat_RFP_C_pons <- CreateSeuratObject(counts = RFP_C_pons, project = "Pons_RFP_C")
+
+seurat_GFP_pons <- merge(seurat_GFP_A_pons, y = seurat_GFP_C_pons, add.cell.ids = c("GFP_A", "GFP_C"))
+seurat_RFP_pons <- merge(seurat_RFP_A_pons, y = c(seurat_RFP_B_pons, seurat_RFP_C_pons), add.cell.ids = c("RFP_A", "RFP_B", "RFP_C"))
+
+GSE247602_pons <- merge(seurat_GFP_pons, y = seurat_RFP_pons, add.cell.ids = c("GFP", "RFP"))
+GSE247602_pons[["percent.mt"]] <- PercentageFeatureSet(GSE247602_pons, pattern = "^mt-")
+
+head(GSE247602_pons@meta.data)
+
+
+GSE247602_pons <- AddMetaData(GSE247602_pons, rep(c("GSE247602_pons"), 7517), col.name = "Study")
+GSE247602_pons <- AddMetaData(GSE247602_pons, rep(c("P42-56"), 7517), col.name = "Age")
+GSE247602_pons <- AddMetaData(GSE247602_pons, rep(c("Pons"), 7517), col.name = "Region")
+GSE247602_pons <- AddMetaData(GSE247602_pons, rep(c("NovaSeq"), 7517), col.name = "Technology")
+GSE247602_pons <- AddMetaData(GSE247602_pons, rep(c("C57BL/6J"), 7517), col.name = "Strain")
+GSE247602_pons <- AddMetaData(GSE247602_pons, rep(c("Both"), 7517), col.name = "Sex")
+
+
+saveRDS(GSE247602_pons, file = "GSE247602_pons.rds")
+
+### Load and Process Additional Datasets Similarly
+# ...
+# Merge datasets
+pons_medulla <- merge(
+  Schwalbe_et_al_2024_Mouse_VLM_Seurat, 
+  y = list(GSE168737, GSE200003_WT, GSE211538, GSE226809_seurat, GSE236349, 
+           GSE247602_medulla, GSE247602_pons, GSE178693),
+  add.cell.ids = c("Schwalbe_Mouse_VLM", "GSE168737", "GSE200003_WT", "GSE211538", 
+                   "GSE226809", "GSE236349", "GSE247602_medulla", "GSE247602_pons", "GSE178693"),
+  project = "Pons_Medulla"
+)
+
+# Cell counts per dataset
+cell_counts <- table(pons_medulla$Study)
+cell_counts_df <- as.data.frame(cell_counts)
+colnames(cell_counts_df) <- c("Dataset", "CellCount")
+
+# Bar plot of cell counts
+ggplot(cell_counts_df, aes(x = Dataset, y = CellCount, fill = Dataset)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = comma(CellCount)), vjust = -0.5, color = "black") +
+  theme_minimal() +
+  labs(title = "Number of Cells per Dataset after QC", x = "Dataset", y = "Cell Count") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_y_continuous(labels = comma)
+
+# Quality control
+pons_medulla[["percent.mt"]] <- PercentageFeatureSet(pons_medulla, pattern = "^mt-")
+VlnPlot(pons_medulla, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), pt.size = 0, raster=FALSE) + NoLegend()
+pons_medulla <- subset(pons_medulla, subset = nFeature_RNA > 200 & nFeature_RNA < 3000 & percent.mt < 5)
+
+# Feature scatter plots
+FeatureScatter(pons_medulla, feature1 = "nCount_RNA", feature2 = "percent.mt", raster = FALSE) +
+  FeatureScatter(pons_medulla, feature1 = "nCount_RNA", feature2 = "nFeature_RNA", raster = FALSE)
+
+# Pre-integration workflow
+pons_medulla <- NormalizeData(pons_medulla)
+pons_medulla <- FindVariableFeatures(pons_medulla)
+pons_medulla <- ScaleData(pons_medulla)
+pons_medulla <- RunPCA(pons_medulla)
+
+# PCA visualization
+DimPlot(pons_medulla, reduction = "pca", group.by = "Study") + ggtitle("PCA Before Integration")
+ElbowPlot(pons_medulla)
+
+# Clustering and UMAP
+pons_medulla <- FindNeighbors(pons_medulla, dims = 1:20)
+pons_medulla <- FindClusters(pons_medulla)
+pons_medulla <- RunUMAP(pons_medulla, dims = 1:20)
+
+# Custom color palette
+custom_colors <- c("#1f78b4", "#33a02c", "#e31a1c", "#ff7f00", "#6a3d9a", "#b15928", "#a6cee3", "#b2df8a", "#fb9a99")
+
+# UMAP visualization before integration
+DimPlot(pons_medulla, reduction = "umap", group.by = "Study", label = FALSE) +
+  scale_color_manual(values = custom_colors) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+  ggtitle("UMAP Before Integration")
+
+# Split datasets for integration
+pons_medulla.list <- SplitObject(pons_medulla, split.by = "Study")
+pons_medulla.list <- lapply(pons_medulla.list, function(x) {
+  x <- NormalizeData(x)
+  x <- FindVariableFeatures(x, selection.method = "vst")
+  x <- ScaleData(x)
+  x <- RunPCA(x)
+  return(x)
+})
+
+# Integration
+features <- SelectIntegrationFeatures(object.list = pons_medulla.list)
+anchors <- FindIntegrationAnchors(object.list = pons_medulla.list)
+pons_medulla <- IntegrateData(anchorset = anchors)
+pons_medulla <- ScaleData(pons_medulla)
+pons_medulla <- RunPCA(pons_medulla)
+pons_medulla <- RunUMAP(pons_medulla, dims = 1:20)
+pons_medulla <- FindNeighbors(pons_medulla, dims = 1:20)
+
+# Final UMAP visualization
+DimPlot(pons_medulla, reduction = 'umap', group.by = 'Study', raster = FALSE, label = FALSE) + theme_bw() + theme(legend.text = element_text(size = 14))
+DimPlot(pons_medulla, reduction = 'umap', group.by = 'Sex', raster = FALSE, label = FALSE) + theme_bw() + theme(legend.text = element_text(size = 14))
+DimPlot(pons_medulla, reduction = 'umap', group.by = 'Age', raster = FALSE, label = FALSE) + theme_bw() + theme(legend.text = element_text(size = 10))
+DimPlot(pons_medulla, reduction = 'umap', group.by = 'Strain', raster = FALSE, label = FALSE) + theme_bw() + theme(legend.text = element_text(size = 14))
+DimPlot(pons_medulla, reduction = 'umap', group.by = 'Region', raster = FALSE, label = FALSE) + theme_bw() + theme(legend.text = element_text(size = 9))
+
+#cluster specific markers 
+features <- c("Pdzd2", "Ccdc60", #Metabolic Glio-Pericyte
+              "Dcn", "Ranbp3l",          # Vascular leptomeningeal cells 
+              "Calb1", "Car8", "Pcp2",  # Purkinje cells
+              "Slco1c1", "Pecam1",       # Endothelial
+              "Agt", "Aqp4",         # Astrocytes
+              "Fyn", "Olig1", # Newly formed oligodendrocytes
+              "Mag", "Mog", "Olig1",     # Oligodendrocytes
+              "Klk6", "Anxa5",           # Mature Oligodendrocytes
+              "Cx3cr1", "P2ry12",        # Microglia
+              "Cspg4", "Pdgfra",         # Polydendrocytes
+              "Th", "Ddc", "Slc6a2",     # Noradrenergic Neurons
+              "Snap25", "Map2", "Syt1")  # Neurons
+
+pons_medulla$cell_type <- as.character(Idents(pons_medulla))
+
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 0] <- "Oligodendrocytes"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 1] <- "Neurons"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 2] <- "Neurons"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 3] <- "Astro1"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 4] <- "Neurons"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 5] <- "Neurons"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 6] <- "Polydendrocytes"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 7] <- "Mature oligodendrocytes"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 8] <- "Neurons"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 9] <- "Microglia"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 10] <- "Endothelial"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 11] <- "Neurons"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 12] <- "Noradrenergic_neurons"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 13] <- "Vascular Leptomeningeal cells"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 14] <- "Astro2"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 15] <- "Newly formed oligodendrocytes"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 16] <- "Metabolic Glio-Pericyte"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 17] <- "Purkinje cells"
+
+Idents(pons_medulla) <- pons_medulla$cell_type
+
+darker_pastel_colors <- c("#D67878", "#6F93AF", "#7FAE7C", "#AA79B6", "#D59A56", 
+                          "#E7E43C", "#B8A58C", "#D88EBE", "#A8DADC", "#6299AD", 
+                          "#E59156", "#FF9966", "#96C2A3", "#E5B90F", "#B7895D")
+
+DimPlot(pons_medulla, reduction = 'umap', raster = FALSE, shuffle = TRUE) + 
+  scale_color_manual(values = cell_type_colors)  + 
+  theme(legend.text = element_text(size = 14)) +
+  labs(title = "UMAP of Pons and Medulla Cell Types")
+
+#####cell type proportion
+library(ggrepel)
+
+cell_type_proportions <- as.data.frame(table(Idents(pons_medulla)))
+colnames(cell_type_proportions) <- c("CellType", "Count")
+
+cell_type_proportions$Percentage <- (cell_type_proportions$Count / sum(cell_type_proportions$Count)) * 100
+darker_pastel_colors <- c("#1b9e77", "#d95f02", "#7570b3", "#e7298a", "#66a61e",
+                          "#e6ab02", "#a6761d", "lightblue", "#1f78b4", "#33a02c",
+                          "#fb9a99", "#e31a1c", "#fdbf6f", "#ff7f00", "#cab2d6")
+
+ggplot(cell_type_proportions, aes(x = 2, y = Percentage, fill = CellType)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y", start = 0) +
+  xlim(0.5, 2.5) +  # Adjust the hole size for donut effect
+  scale_fill_manual(values = darker_pastel_colors) +
+  theme_void() +
+  geom_label_repel(aes(label = paste0(round(Percentage, 1), "%")),
+                   position = position_stack(vjust = 0.5),
+                   box.padding = 0.5, point.padding = 0.5, segment.size = 0.5, # Adjust label repelling
+                   size = 5.5, show.legend = FALSE) +  # Size of the labels
+  theme(
+    legend.text = element_text(size = 12),
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    legend.title = element_blank()
+  ) +
+  ggtitle("Proportion of Cell Types (Donut Chart)")
+
+
+################# subsetting neurons 
+# Set default assay
+DefaultAssay(pons_medulla) <- "integrated"
+
+# Subset neurons
+PM_Neurons <- subset(pons_medulla, idents = c("Neurons"))
+DimPlot(PM_Neurons, reduction = "umap", label = TRUE, label.size = 4.5, pt.size = 0.6) + NoLegend()
+
+# Scaling and PCA
+all.genes <- rownames(PM_Neurons)
+PM_Neurons <- ScaleData(PM_Neurons, features = all.genes)
+PM_Neurons <- FindVariableFeatures(PM_Neurons)
+PM_Neurons <- RunPCA(PM_Neurons, features = VariableFeatures(object = PM_Neurons))
+ElbowPlot(PM_Neurons)
+
+# UMAP and Clustering
+PM_Neurons <- RunUMAP(PM_Neurons, dims = 1:20)
+PM_Neurons <- FindNeighbors(PM_Neurons, reduction = "pca", dims = 1:20)
+PM_Neurons <- FindClusters(PM_Neurons, resolution = 0.2)
+Idents(PM_Neurons) <- "integrated_snn_res.0.2"
+
+# Marker detection
+DefaultAssay(PM_Neurons) <- "RNA"
+PM_Neurons_markers <- FindAllMarkers(PM_Neurons, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+write.csv(PM_Neurons_markers, file = "PM_Neurons_markers.csv", row.names = FALSE)
+
+# Identify top markers
+top_markers <- PM_Neurons_markers %>%
+  filter(p_val_adj < 0.01 & avg_log2FC > 0.25) %>%
+  group_by(cluster) %>%
+  top_n(n = 3, wt = avg_log2FC)
+
+top_genes <- unique(top_markers$gene)
+
+# DotPlot Visualization
+dot_plot <- DotPlot(PM_Neurons, features = top_genes) +
+  scale_color_gradientn(colors = c("lightblue", "yellow", "red")) +
+  scale_size(range = c(1, 6)) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    axis.text.y = element_text(size = 10),
+    plot.title = element_text(size = 14, face = "bold"),
+    panel.grid.major = element_blank(),
+    panel.background = element_blank()
+  ) +
+  labs(title = "Top 3 Markers per Cluster", x = "Genes", y = "Cluster Identities") +
+  coord_flip()
+
+features <- c("Atp1a2", "Atp1b2", #Ion_trans gilal cells
+              "Foxp2", "Stac", "C1ql1",         # Autonomic projection neurons
+              "Chn2", "Cadps2",       # Synaptic neurons
+              "Tac1", "Abi3bp",       # Sensory neurons
+              "Chat", "Slc5a7",         # Cholinergic neurons
+              "Gad1", "Slc32a1", # Inhibitory neurons
+              "Hbb-bs", #Haemoglobin
+              "Mobp", "Mag",           # Myelinating neurons
+              "Slc17a6",        # Excitory neurons
+              "Ptprz1", "Kcna2",         # Projection neurons
+              "Snap25", "Map2", "Syt1", "Meg3")  # Migrating neurons
+
+VlnPlot(PM_Neurons, features = features, stack = TRUE, sort = TRUE, raster = FALSE, fill.by = "ident") +
+  scale_fill_manual(values = cell_type_colors)  +
+  theme(legend.position = "none") + ggtitle("Identity on y-axis")
+
+PM_Neurons$cell_type <- as.character(Idents(PM_Neurons))
+
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 0] <- "Migrating neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 1] <- "Migrating neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 2] <- "Synaptic neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 3] <- "Myelinating neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 4] <- "Myelinating neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 5] <- "Projection neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 6] <- "Sensory neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 7] <- "Excitory neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 8] <- "Excitory neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 9] <- "Inhibitory neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 10] <- "Autonomic projection neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 11] <- "Inhibitory neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 12] <- "Ion_trans gilal cells"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 13] <- "Haemoglobin"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 14] <- "Cholinergic neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 15] <- "Cholinergic neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 16] <- "Inhibitory neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 17] <- "Inhibitory neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 18] <- "Excitory neurons"
+
+Idents(PM_Neurons) <- PM_Neurons$cell_type
+saveRDS(PM_Neurons, file= "Pons_medulla_Neurons.rds")
