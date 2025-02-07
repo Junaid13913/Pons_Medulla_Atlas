@@ -2,9 +2,9 @@
 
 This repository provides metadata, scripts, and documentation for the large-scale transcriptomic atlas of the pons and medulla, compiled from 8 independent single-cell/single-nucleus RNA sequencing (sc/snRNA-seq) datasets. 
 
-The integration was performed using a standardized bioinformatic workflow, clustering, and marker-based annotation. The dataset comprises **317,985 quality-passed cells across 45 cell types.
+The integration was performed using a standardized bioinformatic workflow, clustering, and marker-based annotation. The dataset comprises 317,985 quality-passed cells across 45 cell types.
 
-This integrated large-scale dataset serves as a valuable single-cell neuroscience dataset to explore region-specific molecular insights** and cellular diversity in the brainstem.
+This integrated large-scale dataset serves as a valuable single-cell neuroscience dataset to explore region-specific molecular insights and cellular diversity in the brainstem.
 
 ---
 
