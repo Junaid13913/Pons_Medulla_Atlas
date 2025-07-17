@@ -124,12 +124,12 @@ custom_colors <- c(
   "Metabolic Glio-Pericyte" = "#FF9966"  
 )
 
-# Apply the updated custom color palette to your UMAP plot
+# custom color palette to UMAP plot
 DimPlot(pons_medulla, reduction = "umap", group.by = "cell_type", raster = FALSE, pt.size = 0.2, label = FALSE) + 
   scale_color_manual(values = custom_colors) 
 
 # Cell type proportion group by each study
-# Create a data frame for cell type counts
+# data frame for cell type counts
 cell_type_counts <- as.data.frame(table(pons_medulla$cell_type))
 colnames(cell_type_counts) <- c("Cell_Type", "Count")
 
