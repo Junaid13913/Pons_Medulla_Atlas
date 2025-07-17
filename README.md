@@ -1,6 +1,6 @@
 # Comprehensive Single-Cell Transcriptomic Atlas of Mouse Pons & Medulla
 
-This repository provides metadata, scripts, and documentation for the large-scale transcriptomic atlas of the pons and medulla, compiled from 8 independent single-cell/single-nucleus RNA sequencing (sc/snRNA-seq) datasets. 
+This repository provides metadata, scripts, and documentation for the large-scale transcriptomic atlas of the mouse pons and medulla subregions, compiled from 8 independent single-cell/single-nucleus RNA sequencing (sc/snRNA-seq) datasets. 
 
 The integration was performed using a standardized bioinformatic workflow, clustering, and marker-based annotation. The dataset comprises 317,985 quality-passed cells across 45 cell types.
 
@@ -10,6 +10,7 @@ This integrated large-scale dataset serves as a valuable single-cell neuroscienc
 
 ## Dataset Overview
 - Cells: 317,985 quality passed cells
+- Species: Mouse (Mus musculus)
 - Cell Types: 45 distinct cell types
 - Methodology: scRNA-seq/snRNA-seq integration
 - Data Format:`.rds` files (Seurat objects)
@@ -54,3 +55,17 @@ BiocManager::install("clusterProfiler")
    library(Seurat)
    pons_medulla <- readRDS("Final_Integrated_Pons_Medulla.rds")
 
+# Check metadata
+head(pons_medulla@meta.data)
+
+# View the annotated UMAP
+DimPlot(pons_medulla, reduction = "umap", group.by = "cell_type")
+
+# View all annotated cell types
+unique(pons_medulla$cell_type)
+
+# Cell counts per dataset
+table(pons_medulla$Study)
+
+# Cell counts per cell type
+table(pons_medulla$cell_type)
