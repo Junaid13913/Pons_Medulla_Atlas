@@ -14,7 +14,7 @@ This integrated large-scale dataset serves as a valuable single-cell neuroscienc
 - Cell Types: 45 distinct cell types
 - Methodology: scRNA-seq/snRNA-seq integration
 - Data Format:`.rds` files (Seurat objects)
-- Integration Tool: [Seurat v4.3.0](https://satijalab.org/seurat/)
+- Integration Tool: [Seurat v4.4.2](https://satijalab.org/seurat/)
 
 ## Download the Dataset
 The `.rds` files containing normalized expression data can be accessed via Figshare:
