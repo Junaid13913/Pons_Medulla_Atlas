@@ -1,8 +1,12 @@
 ### Load Required Libraries
+library(devtools)
+library(reticulate)
 library(Seurat)
 library(Matrix)
 library(dplyr)
 library(ggplot2)
+library(tidyr)
+library(tidyverse)
 library(readxl)
 library(ComplexHeatmap)
 library(RColorBrewer)
@@ -265,7 +269,7 @@ pons_medulla$cell_type[pons_medulla$seurat_clusters == 13] <- "Vascular Leptomen
 pons_medulla$cell_type[pons_medulla$seurat_clusters == 14] <- "Astro2"
 pons_medulla$cell_type[pons_medulla$seurat_clusters == 15] <- "Newly formed oligodendrocytes"
 pons_medulla$cell_type[pons_medulla$seurat_clusters == 16] <- "Metabolic Glio-Pericyte"
-pons_medulla$cell_type[pons_medulla$seurat_clusters == 17] <- "Purkinje cells"
+pons_medulla$cell_type[pons_medulla$seurat_clusters == 17] <- "Purkinje neurons_1"
 
 Idents(pons_medulla) <- pons_medulla$cell_type
 
@@ -356,38 +360,22 @@ dot_plot <- DotPlot(PM_Neurons, features = top_genes) +
   labs(title = "Top 3 Markers per Cluster", x = "Genes", y = "Cluster Identities") +
   coord_flip()
 
-features <- c("Atp1a2", "Atp1b2", #Ion_trans gilal cells
-              "Foxp2", "Stac", "C1ql1",         # Autonomic projection neurons
-              "Chn2", "Cadps2",       # Synaptic neurons
-              "Tac1", "Abi3bp",       # Sensory neurons
-              "Chat", "Slc5a7",         # Cholinergic neurons
-              "Gad1", "Slc32a1", # Inhibitory neurons
-              "Hbb-bs", #Haemoglobin
-              "Mobp", "Mag",           # Myelinating neurons
-              "Slc17a6",        # Excitory neurons
-              "Ptprz1", "Kcna2",         # Projection neurons
-              "Snap25", "Map2", "Syt1", "Meg3")  # Migrating neurons
-
-VlnPlot(PM_Neurons, features = features, stack = TRUE, sort = TRUE, raster = FALSE, fill.by = "ident") +
-  scale_fill_manual(values = cell_type_colors)  +
-  theme(legend.position = "none") + ggtitle("Identity on y-axis")
-
 PM_Neurons$cell_type <- as.character(Idents(PM_Neurons))
 
-PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 0] <- "Migrating neurons"
-PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 1] <- "Migrating neurons"
-PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 2] <- "Synaptic neurons"
-PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 3] <- "Myelinating neurons"
-PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 4] <- "Myelinating neurons"
-PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 5] <- "Projection neurons"
-PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 6] <- "Sensory neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 0] <- "Collagen-enriched neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 1] <- "Collagen-enriched neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 2] <- "Cerebellar granule neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 3] <- "Myelinating glia"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 4] <- "Myelinating glia"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 5] <- "Purkinje neurons_2"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 6] <- "Peptidergic neurons"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 7] <- "Excitory neurons"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 8] <- "Excitory neurons"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 9] <- "Inhibitory neurons"
-PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 10] <- "Autonomic projection neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 10] <- "Glutamatergic projection neurons"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 11] <- "Inhibitory neurons"
-PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 12] <- "Ion_trans gilal cells"
-PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 13] <- "Haemoglobin"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 12] <- "Astro3"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 13] <- "Erythrocytes"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 14] <- "Cholinergic neurons"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 15] <- "Cholinergic neurons"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 16] <- "Inhibitory neurons"
@@ -395,13 +383,89 @@ PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 17] <- "Inhibitory neurons"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 18] <- "Excitory neurons"
 
 Idents(PM_Neurons) <- PM_Neurons$cell_type
-saveRDS(PM_Neurons, file= "Pons_medulla_Neurons.rds")
 
-############################################################# gaba and gluta 
-DimPlot(PM_Neurons, reduction = 'umap', group.by = "cell_type", raster = FALSE, shuffle = TRUE)
-head(PM_Neurons)
-Idents(final_pons_medulla_clean) <- "Study"
+###### DEGs of annotated neuronal cells
 
+saveRDS(PM_Neurons, file= "Pons_medulla_Neurons_leve1.rds")
+
+
+#################################### removing non_neuronal contamination
+# Audit before
+cat("Before filtering:\n"); print(table(Idents(PM_Neurons)))
+
+# removing non_neuronal contamination
+to_drop <- c("Erythrocytes", "Myelinating glia", "Astro3")
+PM_Neurons_clean <- subset(PM_Neurons, idents = setdiff(levels(PM_Neurons), to_drop))
+
+# Droping now-unused levels, keep same cluster labels/UMAP coordinates
+Idents(PM_Neurons_clean) <- droplevels(Idents(PM_Neurons_clean))
+
+# Quick audit after
+cat("\nAfter filtering:\n"); print(table(Idents(PM_Neurons_clean)))
+cat(sprintf("\nRemoved %d cells (%.2f%%)\n",
+            ncol(PM_Neurons) - ncol(PM_Neurons_clean),
+            100 * (ncol(PM_Neurons) - ncol(PM_Neurons_clean)) / ncol(PM_Neurons)))
+
+markers <- c( "Grid2", "Itpr1",  "Pcp4", "Adcyap1", "Calca", "Tac1",
+              "Gad1", "Gad2", "Slc32a1", "Stac", "Foxp2" ,"Slc17a6", "Slc17a7", "Tanc1"," Col25a1", "Col11a1", "Col4a2", 
+              "Chat", "Slc5a7", "Isl1", "Grm4", "Grin2c", "Neurod1", "Car4", 'Reln')
+
+DotPlot(PM_Neurons_clean, features = markers, group.by = "cell_type") +
+  RotatedAxis() +
+  theme_bw(base_size = 16) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+    axis.text.y = element_text(size = 12),
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5)
+  ) +
+  ggtitle("") +
+  scale_color_gradientn(colors = c("white", "lightgrey", "darkred")) +  
+  scale_size(range = c(1, 8))  
+
+# Plot using the SAME UMAP already stored in the object
+p_umap <- DimPlot(PM_Neurons_clean, reduction = "umap",
+                  group.by = "cell_type", label = FALSE) +
+  ggtitle("Neuron subset (contaminants removed; original UMAP)")
+print(p_umap)
+
+custom_colors <- c("#1f78b4", "#33a02c", "#e31a1c", "#ff7f00", "#6a3d9a", "#b15928", 
+                   "#a6cee3", "#b2df8a", "#fb9a99", "#fdbf6f", "#cab2d6", "#ffff99", 
+                   "#ff00ff", "#00ffff", "#0000ff", "#ff1493", "#7fffd4", "#ffa07a")
+
+DimPlot(PM_Neurons_clean, reduction = 'umap', raster = FALSE, shuffle = TRUE, label = FALSE) + 
+  scale_color_manual(values = custom_colors) +  
+  theme_bw() + 
+  theme(legend.text = element_text(size = 14),  
+        axis.title = element_text(size = 16, face = "bold"),  
+        axis.text = element_text(size = 12),  
+        plot.title = element_text(size = 18, face = "bold", hjust = 0.5), 
+        panel.border = element_rect(color = "black", size = 1),  
+        panel.grid = element_blank()) 
+
+DefaultAssay(PM_Neurons_clean) <- "RNA"
+slot_to_use <- "data"
+
+markers_all <- FindAllMarkers(
+  PM_Neurons_clean,
+  only.pos       = TRUE,
+  test.use       = "wilcox",
+  min.pct        = 0.10,
+  logfc.threshold = 0.25,
+  return.thresh  = 0.05,
+  assay          = "RNA",
+  slot           = slot_to_use
+)
+
+if ("avg_logFC" %in% colnames(markers_all) && !("avg_log2FC" %in% colnames(markers_all))) {
+  markers_all <- markers_all %>% rename(avg_log2FC = avg_logFC)  # unify name
+}
+
+markers_all <- markers_all %>% arrange(cluster, desc(avg_log2FC), p_val_adj)
+write.csv(markers_all, "DEG_Level1_Neurons.csv", row.names = FALSE)
+
+saveRDS(PM_Neurons_clean, file= "Pons_medulla_Neurons_leve2.rds")
+
+#######################sub-setting of excitatory_neurons and inhibitory_neurons
 excitatory_neurons <- subset(PM_Neurons, subset = cell_type == "Excitory neurons")
 inhibitory_neurons <- subset(PM_Neurons, subset = cell_type == "Inhibitory neurons")
 
@@ -411,7 +475,7 @@ combined_neurons <- FindVariableFeatures(combined_neurons)
 combined_neurons <- ScaleData(combined_neurons)
 combined_neurons <- RunPCA(combined_neurons)
 combined_neurons <- FindNeighbors(combined_neurons, dims = 1:20)
-combined_neurons <- FindClusters(combined_neurons, resolution = 0.1)  # Adjust resolution as needed
+combined_neurons <- FindClusters(combined_neurons, resolution = 0.1)  
 combined_neurons <- RunUMAP(combined_neurons, dims = 1:20)
 
 DimPlot(combined_neurons, reduction = "umap")
@@ -442,36 +506,9 @@ markers_clean <- FindAllMarkers(combined_neurons_clean, only.pos = TRUE, min.pct
 markers_clean %>%
   group_by(cluster) %>%
   dplyr::filter(avg_log2FC > 1) %>%
-  slice_head(n = 5) %>%
+  slice_head(n = 10) %>%
   ungroup() -> top10
 DoHeatmap(combined_neurons_clean, features = top10$gene) + NoLegend()
-library(Seurat)
-library(ggplot2)
-
-# Define a custom color scheme for the heatmap
-heatmap_colors <- colorRampPalette(c("#053061", "#2166AC", "#92C5DE", "#F7F7F7", "#FDDBC7", "#B2182B", "#67001F"))(100)
-
-# Create the heatmap with refined aesthetics
-DoHeatmap(
-  combined_neurons_clean, 
-  features = top10$gene, 
-  size = 4                       # Adjust text size for better readability
-) +
-  scale_fill_gradientn(colors = heatmap_colors) +  # Apply custom color palette
-  theme_minimal() +                                # Minimal theme for a clean layout
-  theme(
-    axis.text.x = element_blank(),                 # Remove x-axis labels
-    axis.ticks.x = element_blank(),                # Remove x-axis ticks
-    panel.grid.major = element_blank(),            # Remove major grid lines
-    panel.grid.minor = element_blank(),            # Remove minor grid lines
-    axis.text.y = element_text(size = 10, face = "italic")  # Italicize gene names
-  ) +
-  labs(
-    title = "Heatmap of Top 10 Marker Genes",       # Add a title
-    x = NULL,                                       # Remove x-axis label
-    y = "Genes"                                     # Add y-axis label
-  ) +
-  NoLegend()  
 
 
 combined_neurons_clean <- subset(combined_neurons_clean, idents = 3, invert = TRUE)
@@ -479,30 +516,30 @@ combined_neurons_clean <- subset(combined_neurons_clean, idents = 3, invert = TR
 DimPlot(combined_neurons_clean, reduction = "umap", group.by = "seurat_clusters")
 
 VlnPlot(combined_neurons_clean, features = c("Slc17a6", "Slc17a7", "Gad1", "Gad2", "Fam19a1", "Schip1", "Trhde",
-                                             "Nfia", "Fbxl7", "Gpc3", "Zeb2", "Cpne9", "Sema5a", "Grik1", "Ntng1","Ebf2", "Nefm", "Ttn", "Sox5", "Lhfp"), stack = TRUE, flip = TRUE)
+                                             "Nfia", "Fbxl7", "Gpc3", "Zeb2", "Cpne9", "Sema5a", "Grik1", "Ntng1","Ebf2", "Nefm", "Ttn", "Sox5", "Lhfp"), group.by = "cell_type", stack = TRUE, flip = TRUE)
 
-# Filter the top markers based on adjusted p-value and log fold change for GBA-seq data
+
+# top markers 
 top_markers <- markers_clean %>%
   filter(p_val_adj < 0.11 & avg_log2FC > 0.25) %>%
   group_by(cluster) %>%
-  top_n(n = 5, wt = avg_log2FC)  # Select top 3 markers per cluster by avg_log2FC
+  top_n(n = 5, wt = avg_log2FC)  
 
 # Extract unique genes for dot plot
 top_genes <- unique(top_markers$gene)
 
-# Generate the Dot Plot for GBA-seq data
 DotPlot(combined_neurons_clean, features = top_genes) +
-  scale_color_gradientn(colors = c("#a6cee3", "#cab2d6", "#e31a1c")) +  # Color gradient: lightblue to red
-  scale_size(range = c(1, 6)) +  # Adjust dot size range for better clarity
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 10),  # Adjust x-axis cluster labels
-        axis.text.y = element_text(size = 10),  # Adjust y-axis text size for gene names
-        plot.title = element_text(size = 14, face = "bold"),  # Bold title for clarity
-        panel.grid.major = element_blank(),  # Remove gridlines for clarity
-        panel.background = element_blank()) +  # Minimal background
+  scale_color_gradientn(colors = c("#a6cee3", "#cab2d6", "#e31a1c")) +  
+  scale_size(range = c(1, 6)) +  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 10),  
+        axis.text.y = element_text(size = 10),  
+        plot.title = element_text(size = 14, face = "bold"),  
+        panel.grid.major = element_blank(),  
+        panel.background = element_blank()) +  
   labs(title = "Top 5 Markers per Cluster",
-       x = "Genes", y = "Cluster Identities") +  # Swap axis labels
-  coord_flip() +  # Flip coordinates to swap x and y axes
-  theme_minimal()  # Minimal theme for clean layout
+       x = "Genes", y = "Cluster Identities") +  
+  coord_flip() +  
+  theme_minimal()  
 
 
 combined_neurons_clean$cell_type <- as.character(Idents(combined_neurons_clean))
@@ -523,61 +560,8 @@ combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 13] <
 
 Idents(combined_neurons_clean) <- combined_neurons_clean$cell_type
 
-# Find markers for annotated cell types
-markers_clean <- FindAllMarkers(
-  combined_neurons_clean,
-  only.pos = TRUE,
-  min.pct = 0.25,
-  logfc.threshold = 0.25
-)
-
-# Select the top markers for the heatmap
-top_markers <- markers_clean %>%
-  group_by(cluster) %>%
-  filter(avg_log2FC > 1) %>%   # Filter for significant fold change
-  slice_head(n = 7)           # Select top 10 markers per cell type
-# Extract the top marker genes
-top_genes <- unique(top_markers$gene)
-# Define a refined color scheme for the heatmap
-heatmap_colors <- colorRampPalette(c("#053061", "#2166AC", "#92C5DE", "#F7F7F7", "#FDDBC7", "#B2182B", "#67001F"))(100)
-# Define the cell type colors manually
-cell_type_colors <- c(
-  "Glut2" = "#FF6F61",           # Coral
-  "GABA2" = "#6A0572",           # Deep purple
-  "Glut1" = "#2A9D8F",           # Teal green
-  "Glut7" = "#264653",           # Dark slate blue
-  "Glut6" = "#F4A261",           # Sandy orange
-  "Glut4" = "#E63946",           # Crimson red
-  "Glut5" = "#457B9D",           # Steel blue
-  "GABA1" = "#F4D35E",           # Golden yellow
-  "GABA5" = "#A8DADC",           # Aqua mint
-  "GABA4" = "#C77DFF",           # Lavender purple
-  "GABA3" = "#9A031E",           # Deep red
-  "GABA6" = "#FF9F1C"            # Bright orange
-)
-# Create the heatmap
-DoHeatmap(
-  combined_neurons_clean,
-  features = top_genes,
-  group.colors = cell_type_colors, 
-  size = 4  # Adjust text size for better readability
-) +
-  scale_fill_gradientn(colors = heatmap_colors) +  # Apply custom color palette
-  theme_minimal() +                                # Minimal theme for clean layout
-  theme(
-    axis.text.x = element_blank(),                 # Remove x-axis labels
-    axis.ticks.x = element_blank(),                # Remove x-axis ticks
-    panel.grid.major = element_blank(),            # Remove major grid lines
-    panel.grid.minor = element_blank(),            # Remove minor grid lines
-    axis.text.y = element_text(size = 10, face = "italic")  # Italicize gene names
-  ) +
-  labs(
-    title = "",  # Add a title
-    x = NULL,                                               # Remove x-axis label
-    y = "Genes"                                             # Add y-axis label
-  )
-
-
+# Load required libraries
+library(ggplot2)
 
 # Define a custom color palette for the violin plot
 custom_colors <- c("#d73027", "#fc8d59", "#fee090", "#91bfdb", "#4575b4", 
@@ -594,12 +578,19 @@ VlnPlot(combined_neurons_clean,
   scale_fill_manual(values = custom_colors) + NoLegend()
 
 
-# Generate UMAP plot with colored cluster annotations
-dim_plot <- DimPlot(combined_neurons_clean, reduction = 'umap', raster = FALSE, shuffle = TRUE, label = FALSE) + 
-  scale_color_manual(values = custom_colors) 
-# Display the UMAP plot with cluster labels
-dim_plot
 
+# Generate UMAP plot with colored cluster annotations
+dim_plot <- DimPlot(combined_neurons_clean, reduction = 'umap', raster = FALSE, shuffle = TRUE, label = TRUE) + 
+  scale_color_manual(values = custom_colors) +  
+  theme_bw() + 
+  theme(legend.text = element_text(size = 14),  
+        axis.title = element_text(size = 16, face = "bold"), 
+        axis.text = element_text(size = 12),  
+        plot.title = element_text(size = 18, face = "bold", hjust = 0.5),  
+        panel.border = element_rect(color = "black", size = 1),  
+        panel.grid = element_blank()) + NoLegend() 
+
+dim_plot
 
 ##### mapping cell barcodes of neuronal subset to original seurat object
 PM_Neurons$cell_type [mapply(grepl, colnames(PM_Neurons), paste(colnames(subset(combined_neurons_clean, subset = cell_type == c("GABA1"))), collapse = "|"))] <- "GABA1"
@@ -617,25 +608,19 @@ PM_Neurons$cell_type [mapply(grepl, colnames(PM_Neurons), paste(colnames(subset(
 PM_Neurons$cell_type [mapply(grepl, colnames(PM_Neurons), paste(colnames(subset(combined_neurons_clean, subset = cell_type == c("Glut7"))), collapse = "|"))] <- "Glut7"
 
 saveRDS(combined_neurons_clean, file= "GABA_Gluta.rds")
-saveRDS(PM_Neurons, file= "PM_Neurons_level2.rds")
 
 ##############to remove the cells from original object that were removed durong subtyping
 clean_barcodes <- colnames(combined_neurons_clean)
 
-# Step 3: Identify excitatory and inhibitory neurons in PM_Neurons
+# Identify excitatory and inhibitory neurons in PM_Neurons
 excitatory_inhibitory_cells <- which(PM_Neurons$cell_type %in% c("Excitory neurons", "Inhibitory neurons"))
 
-# Step 4: Map the clean subtypes back to PM_Neurons
+
 # Only update the annotations for the matching barcodes
 PM_Neurons$cell_type[excitatory_inhibitory_cells] <- combined_neurons_clean$cell_type[match(colnames(PM_Neurons)[excitatory_inhibitory_cells], colnames(combined_neurons_clean))]
 
-# Step 5: Handle NA clusters (for cells without a match in combined_neurons_clean)
-# Option 1: Assign NA cells to a "Low-Quality" label
+#  Assign NA cells to a "Low-Quality" label
 PM_Neurons$cell_type[is.na(PM_Neurons$cell_type)] <- "Low-Quality"
-
-# Step 6: Visualize the updated PM_Neurons UMAP with mapped subtypes
-# Clear any open graphical devices
-dev.off()
 
 DimPlot(PM_Neurons, reduction = "umap", group.by = "cell_type", raster = FALSE)
 
@@ -645,33 +630,244 @@ print(cell_type_counts)
 
 PM_Neurons_clean <- subset(PM_Neurons, subset = cell_type != "Low-Quality")
 DimPlot(PM_Neurons_clean, reduction = "umap", group.by = "cell_type", raster = FALSE)
+Idents(PM_Neurons_clean) <- PM_Neurons_clean$cell_type
+
+#saveRDS(PM_Neurons_clean, file= "PM_Neurons_clean.rds")
 
 
-DimPlot(PM_Neurons, reduction = "umap", group.by = "cell_type", raster = FALSE)
 # Define a custom color palette with more vibrant and distinct colors
 custom_colors <- c("GABA1" = "#1b9e77", "GABA2" = "#d95f02", "GABA3" = "#7570b3", 
                    "GABA4" = "#e7298a", "GABA5" = "#66a61e", "GABA6" = "#e6ab02",
                    "Glut1" = "#a6761d", "Glut2" = "#666666", "Glut3" = "#1f78b4", 
                    "Glut4" = "#b2df8a", "Glut5" = "#33a02c", "Glut6" = "#fb9a99", 
                    "Glut7" = "#e31a1c",
-                   "Autonomic projection neurons" = "#d53e4f", "Cholinergic neurons" = "#ff7f00", 
-                   "Haemoglobin" = "#6a3d9a", "Ion_trans gilal cells" = "#8dd3c7", 
-                   "Migrating neurons" = "#fdae61", "Myelinating neurons" = "#b3de69", 
-                   "Projection neurons" = "#bc80bd", "Synaptic neurons" = "#ccebc5", 
-                   "Sensory neurons" = "#ffed6f")
+                   "Glutamatergic projection neurons" = "#d53e4f", "Cholinergic neurons" = "#ff7f00", 
+                   "Erythrocytes" = "#6a3d9a", "Astro3" = "#8dd3c7", 
+                   "Peptidergic neurons" = "#fdae61", "Myelinating glia" = "#b3de69", 
+                   "Purkinjie neurons_2" = "#bc80bd", "Collagen-enriched neurons" = "#ccebc5", 
+                   "Cerebellar granule neurons" = "#ffed6f")
 
-# Generate UMAP plot with more vibrant and distinct colors
-DimPlot(PM_Neurons_clean, reduction = "umap", group.by = "cell_type", raster = FALSE) + 
+
+# Generate UMAP plot with colored cluster annotations
+dim_plot <- DimPlot(PM_Neurons_clean, reduction = 'umap', raster = FALSE, shuffle = TRUE, label = FALSE) + 
   scale_color_manual(values = custom_colors) +  
-  theme_bw() +  
+  theme_bw() + 
   theme(legend.text = element_text(size = 14),  
-        legend.title = element_text(size = 14, face = "bold"),  
-        axis.title = element_text(size = 16, face = "bold"),  
+        axis.title = element_text(size = 16, face = "bold"), 
         axis.text = element_text(size = 12),  
         plot.title = element_text(size = 18, face = "bold", hjust = 0.5),  
         panel.border = element_rect(color = "black", size = 1),  
-        panel.grid = element_blank()) +  
-  labs(title = "Neuornal Cell Type", x = "UMAP 1", y = "UMAP 2")  
+        panel.grid = element_blank()) 
 
-getwd()
-saveRDS(PM_Neurons_clean, file= "PM_Neurons_level2.rds")
+dim_plot
+
+
+#################
+# Subset the migrating neurons
+Collagen_enriched <- subset(PM_Neurons_clean, idents = "Collagen-enriched neurons")
+
+# Identify mitochondrial and ribosomal genes
+mt_genes <- grep("^mt-", rownames(Collagen_enriched@assays$RNA@data), value = TRUE)
+ribo_genes <- grep("^(Rpl|Rps)", rownames(Collagen_enriched@assays$RNA@data), value = TRUE)
+genes_to_remove <- c(mt_genes, ribo_genes)
+genes_to_keep <- setdiff(rownames(Collagen_enriched@assays$RNA@data), genes_to_remove)
+
+# Subset counts, data, and meta.features layers
+Collagen_enriched@assays$RNA@counts <- Collagen_enriched@assays$RNA@counts[genes_to_keep, ]
+Collagen_enriched@assays$RNA@data <- Collagen_enriched@assays$RNA@data[genes_to_keep, ]
+if (!is.null(Collagen_enriched@assays$RNA@meta.features)) {
+  Collagen_enriched@assays$RNA@meta.features <- Collagen_enriched@assays$RNA@meta.features[genes_to_keep, ]
+}
+
+Collagen_enriched <- NormalizeData(Collagen_enriched)
+Collagen_enriched <- FindVariableFeatures(Collagen_enriched, selection.method = "vst")
+Collagen_enriched <- ScaleData(Collagen_enriched)
+Collagen_enriched <- RunPCA(Collagen_enriched)
+ElbowPlot(Collagen_enriched)
+Collagen_enriched <- RunUMAP(Collagen_enriched, dims = 1:20)
+Collagen_enriched <- FindNeighbors(Collagen_enriched, dims = 1:20)
+Collagen_enriched <- FindClusters(Collagen_enriched, resolution = 0.1)
+
+DimPlot(Collagen_enriched, reduction = "umap", group.by = "seurat_clusters")
+
+
+VlnPlot(
+  Collagen_enriched, 
+  features = c("Dcx", "Tubb3", "Ctnna3", "Snap25", "Arc"), 
+  raster = FALSE, 
+  pt.size = 0
+)
+
+Collagen_enriched_markers <- FindAllMarkers(Collagen_enriched, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+
+top_markers <- Collagen_enriched_markers %>%
+  filter(p_val_adj < 0.05 & avg_log2FC > 0.25) %>%
+  group_by(cluster) %>%
+  top_n(n = 5, wt = avg_log2FC)  
+
+top_genes <- unique(top_markers$gene)
+
+dot_plot <- DotPlot(Collagen_enriched, features = top_genes) +
+  scale_color_gradientn(colors = c("#2C7BB6", "purple", "orange"))+  
+  scale_size(range = c(1, 6)) +  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 10),  
+        axis.text.y = element_text(size = 10),  
+        plot.title = element_text(size = 14, face = "bold"), 
+        panel.grid.major = element_blank(),  
+        panel.background = element_blank()) +  
+  labs(title = "Top 5 Markers per Cluster",
+       x = "Genes", y = "Cluster Identities") + 
+  coord_flip() +  
+  theme_minimal()  
+
+# Display the plot
+dot_plot
+
+# Extract marker genes for each cluster
+marker_genes <- Collagen_enriched_markers %>%
+  filter(p_val_adj < 0.05 & avg_log2FC > 0.25) %>%
+  group_by(cluster) %>%
+  summarise(genes = list(unique(gene)))
+
+################################
+library(clusterProfiler)
+library(org.Mm.eg.db)  
+# Initialize a list to store enrichment results for all clusters
+cluster_enrichment <- list()
+
+# Loop through each cluster
+for (i in 1:nrow(marker_genes)) {
+  cluster_name <- marker_genes$cluster[i]
+  cluster_genes <- marker_genes$genes[[i]]
+  
+  # Perform GO enrichment analysis
+  enriched_GO <- enrichGO(gene = cluster_genes,
+                          OrgDb = org.Mm.eg.db,
+                          keyType = "SYMBOL",  
+                          ont = "BP",  
+                          pvalueCutoff = 0.05)
+  
+  simplified_GO <- simplify(enriched_GO,
+                            cutoff = 0.7,  
+                            by = "p.adjust",
+                            select_fun = min)
+  
+  # Convert to a data frame and add cluster name
+  enriched_GO_df <- as.data.frame(simplified_GO)
+  enriched_GO_df$Cluster <- cluster_name  
+  
+  # Store results in the list
+  cluster_enrichment[[i]] <- enriched_GO_df
+}
+
+combined_enrichment <- do.call(rbind, cluster_enrichment)
+
+
+
+# Select top 5 GO terms per cluster based on adjusted p-values
+top_GO_terms <- combined_enrichment %>%
+  group_by(Cluster) %>%
+  top_n(-10, wt = p.adjust) %>%  
+  mutate(log_pvalue = -log10(p.adjust))  
+
+plot_data <- top_GO_terms %>%
+  arrange(Cluster, desc(log_pvalue)) %>%  
+  mutate(Description = factor(Description, levels = unique(Description)))  
+
+
+
+ggplot(plot_data, aes(x = Cluster, y = Description)) +
+  geom_tile(aes(fill = log_pvalue), color = "white") +  
+  scale_fill_viridis(option = "inferno") +  
+  labs(title = "GO Enrichment by Cluster",
+       x = "Cluster",
+       y = "GO Terms",
+       fill = "-log10(p-value)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  
+Collagen_enriched$cell_type <- as.character(Idents(Collagen_enriched))
+
+Collagen_enriched$cell_type[Collagen_enriched$seurat_clusters == 0] <- "Neu_1"
+Collagen_enriched$cell_type[Collagen_enriched$seurat_clusters == 1] <- "Neu_2"
+Collagen_enriched$cell_type[Collagen_enriched$seurat_clusters == 2] <- "Neu_3"
+Collagen_enriched$cell_type[Collagen_enriched$seurat_clusters == 3] <- "Neu_4"
+Collagen_enriched$cell_type[Collagen_enriched$seurat_clusters == 4] <- "Neu_5"
+Collagen_enriched$cell_type[Collagen_enriched$seurat_clusters == 5] <- "Neu_6"
+
+Idents(Collagen_enriched) <- Collagen_enriched$cell_type
+
+cell_type_colors <- c(
+  "Neu_1" = "#1f77b4",
+  "Neu_2" = "#ff7f0e",
+  "Neu_3" = "#2ca02c",
+  "Neu_4" = "#d62728",
+  "Neu_5" = "#9467bd",
+  "Neu_6" = "#8c564b"
+)
+
+# Create DimPlot with the custom colors
+DimPlot(
+  Collagen_enriched,
+  reduction = "umap",
+  group.by = "cell_type",
+  label = FALSE,
+  cols = cell_type_colors
+) + ggtitle("UMAP Plot with Unique Cell Type Colors")
+
+
+##### mapping cell barcodes of neuronal subset to original seurat object
+PM_Neurons_clean$cell_type [mapply(grepl, colnames(PM_Neurons_clean), paste(colnames(subset(Collagen_enriched, subset = cell_type == c("Neu_1"))), collapse = "|"))] <- "Neu_1"
+PM_Neurons_clean$cell_type [mapply(grepl, colnames(PM_Neurons_clean), paste(colnames(subset(Collagen_enriched, subset = cell_type == c("Neu_2"))), collapse = "|"))] <- "Neu_2"
+PM_Neurons_clean$cell_type [mapply(grepl, colnames(PM_Neurons_clean), paste(colnames(subset(Collagen_enriched, subset = cell_type == c("Neu_3"))), collapse = "|"))] <- "Neu_3"
+PM_Neurons_clean$cell_type [mapply(grepl, colnames(PM_Neurons_clean), paste(colnames(subset(Collagen_enriched, subset = cell_type == c("Neu_4"))), collapse = "|"))] <- "Neu_4"
+PM_Neurons_clean$cell_type [mapply(grepl, colnames(PM_Neurons_clean), paste(colnames(subset(Collagen_enriched, subset = cell_type == c("Neu_5"))), collapse = "|"))] <- "Neu_5"
+PM_Neurons_clean$cell_type [mapply(grepl, colnames(PM_Neurons_clean), paste(colnames(subset(Collagen_enriched, subset = cell_type == c("Neu_6"))), collapse = "|"))] <- "Neu_6"
+
+# Define a custom color palette with added colors for Neu_1 to Neu_6
+custom_colors <- c(
+  "GABA1" = "#1b9e77", "GABA2" = "#d95f02", "GABA3" = "#7570b3", 
+  "GABA4" = "#e7298a", "GABA5" = "#66a61e", "GABA6" = "#e6ab02",
+  "Glut1" = "#a6761d", "Glut2" = "#ccebc5", "Glut3" = "#1f78b4", 
+  "Glut4" = "#b2df8a", "Glut5" = "#33a02c", "Glut6" = "#fb9a99", 
+  "Glut7" = "#e31a1c",
+  "Glutamatergic projection neurons" = "#d53e4f", "Cholinergic neurons" = "#ff7f00", 
+  "Erythrocytes" = "#6a3d9a", "Astro3" = "#8dd3c7", 
+  "Peptidergic neurons" = "#fdae61", "Myelinating glia" = "#b3de69", 
+  "Purkinjie neurons_2" = "#bc80bd",
+  "Cerebellar granule neurons" = "#ffed6f",
+  "Neu_1" = "#8c564b", "Neu_2" = "#9467bd", "Neu_3" = "#17becf", 
+  "Neu_4" = "#d62728", "Neu_5" = "#2ca02c", "Neu_6" = "#ff7f0e"
+)
+
+# Generate UMAP plot with vibrant and distinct colors
+DimPlot(PM_Neurons_clean, reduction = "umap", group.by = "cell_type", raster = FALSE, pt.size = 0.2, label = FALSE) + 
+  scale_color_manual(values = custom_colors) #+ NoLegend()
+
+Idents(PM_Neurons_clean) <- "cell_type"
+
+cells_to_keep <- subset(
+  PM_Neurons_clean,
+  idents = setdiff(levels(PM_Neurons_clean), 
+                   c("Erythrocytes", "Myelinating glia", "Astro3"))
+)
+
+p <- DimPlot(
+  cells_to_keep, 
+  reduction = "umap", 
+  group.by = "cell_type", 
+  raster = FALSE, 
+  pt.size = 0.3, 
+  label = FALSE
+) + scale_color_manual(values = custom_colors)
+
+ggsave(
+  filename = "UMAP_neurons_300dpi.png", 
+  plot = p, 
+  width = 10.70, height = 5.29, units = "in", 
+  dpi = 300
+)
+
+saveRDS(cells_to_keep, file= "PM_Neurons_Level3.rds")
+
+
+##############################################################
