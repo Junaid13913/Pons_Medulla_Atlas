@@ -369,10 +369,10 @@ PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 3] <- "Myelinating glia"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 4] <- "Myelinating glia"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 5] <- "Purkinje neurons_2"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 6] <- "Peptidergic neurons"
-PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 7] <- "Excitory neurons"
-PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 8] <- "Excitory neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 7] <- "Vglut1+ excitatory neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 8] <- "Vglut1+ excitatory neurons"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 9] <- "Inhibitory neurons"
-PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 10] <- "Glutamatergic projection neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 10] <- "Vglut2+ excitatory neurons"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 11] <- "Inhibitory neurons"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 12] <- "Astro3"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 13] <- "Erythrocytes"
@@ -380,7 +380,7 @@ PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 14] <- "Cholinergic neurons"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 15] <- "Cholinergic neurons"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 16] <- "Inhibitory neurons"
 PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 17] <- "Inhibitory neurons"
-PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 18] <- "Excitory neurons"
+PM_Neurons$cell_type[PM_Neurons$seurat_clusters == 18] <- "Vglut1+ excitatory neurons"
 
 Idents(PM_Neurons) <- PM_Neurons$cell_type
 
@@ -466,7 +466,10 @@ write.csv(markers_all, "DEG_Level1_Neurons.csv", row.names = FALSE)
 saveRDS(PM_Neurons_clean, file= "Pons_medulla_Neurons_leve2.rds")
 
 #######################sub-setting of excitatory_neurons and inhibitory_neurons
-excitatory_neurons <- subset(PM_Neurons, subset = cell_type == "Excitory neurons")
+excitatory_neurons <- subset(
+  PM_Neurons,
+  subset = cell_type %in% c("Vglut1+ excitatory neurons", "Vglut2+ excitatory neurons")
+)
 inhibitory_neurons <- subset(PM_Neurons, subset = cell_type == "Inhibitory neurons")
 
 combined_neurons <- merge(excitatory_neurons, inhibitory_neurons)
@@ -491,7 +494,7 @@ DoHeatmap(combined_neurons, features = top10$gene) + NoLegend()
 combined_neurons[["percent.mt"]] <- PercentageFeatureSet(combined_neurons, pattern = "^mt-")
 VlnPlot(combined_neurons, features = "percent.mt", group.by = "seurat_clusters", pt.size = 0)
 
-combined_neurons_clean <- subset(combined_neurons, idents = c(5, 3, 4, 12), invert = TRUE)
+combined_neurons_clean <- subset(combined_neurons, idents = c(5, 6, 8, 16), invert = TRUE)
 DimPlot(combined_neurons_clean, reduction = "umap", group.by = "seurat_clusters")
 
 combined_neurons_clean <- ScaleData(combined_neurons_clean)
@@ -515,8 +518,10 @@ combined_neurons_clean <- subset(combined_neurons_clean, idents = 3, invert = TR
 
 DimPlot(combined_neurons_clean, reduction = "umap", group.by = "seurat_clusters")
 
+Idents(combined_neurons_clean) <- combined_neurons_clean$seurat_clusters
+
 VlnPlot(combined_neurons_clean, features = c("Slc17a6", "Slc17a7", "Gad1", "Gad2", "Fam19a1", "Schip1", "Trhde",
-                                             "Nfia", "Fbxl7", "Gpc3", "Zeb2", "Cpne9", "Sema5a", "Grik1", "Ntng1","Ebf2", "Nefm", "Ttn", "Sox5", "Lhfp"), group.by = "cell_type", stack = TRUE, flip = TRUE)
+                                             "Nfia", "Fbxl7", "Gpc3", "Zeb2", "Cpne9", "Sema5a", "Grik1", "Ntng1","Ebf2", "Nefm", "Ttn", "Sox5", "Lhfp"), group.by = "seurat_clusters", stack = TRUE, flip = TRUE)
 
 
 # top markers 
@@ -545,18 +550,20 @@ DotPlot(combined_neurons_clean, features = top_genes) +
 combined_neurons_clean$cell_type <- as.character(Idents(combined_neurons_clean))
 
 combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 0] <- "GABA1"
-combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 1] <- "GABA2"
-combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 2] <- "Glut1"
-combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 4] <- "GABA3"
-combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 5] <- "Glut2"
+combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 1] <- "Glut1"
+combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 2] <- "GABA2"
+combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 3] <- "Glut2"
+combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 4] <- "Glut3"
+combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 5] <- "GABA3"
 combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 6] <- "Glut3"
 combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 7] <- "GABA4"
-combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 8] <- "GABA5"
-combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 9] <- "Glut4"
-combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 10] <- "Glut5"
-combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 11] <- "Glut6"
-combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 12] <- "GABA6"
+combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 8] <- "Glut4"
+combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 9] <- "GABA5"
+combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 10] <- "GABA6"
+combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 11] <- "Glut5"
+combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 12] <- "Glut6"
 combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 13] <- "Glut7"
+combined_neurons_clean$cell_type[combined_neurons_clean$seurat_clusters == 14] <- "Glut8"
 
 Idents(combined_neurons_clean) <- combined_neurons_clean$cell_type
 
@@ -567,20 +574,20 @@ library(ggplot2)
 custom_colors <- c("#d73027", "#fc8d59", "#fee090", "#91bfdb", "#4575b4", 
                    "#a6cee3", "#cab2d6", "#e31a1c", "#33a02c", "#1f78b4",
                    "#ff7f00", "#b2df8a", "#6a3d9a", "#ffff99", "#fdbf6f",
-                   "#fb9a99", "#a6cee3", "#b15928", "#e31a1c", "#1f78b4")
+                   "#fb9a99", "#a6cee3", "#b15928", "#e31a1c", "#1f78b4", "#bc80bd", "#66a61e", "#1f78b4", "#d53e4f")
 
 # Generate the violin plot with custom colors and improved aesthetics
 VlnPlot(combined_neurons_clean, 
-        features = c("Slc17a6", "Slc17a7", "Gad1", "Gad2", "Fam19a1", "Schip1", "Trhde",
-                     "Nfia", "Fbxl7", "Gpc3", "Zeb2", "Cpne9", "Sema5a", "Grik1", "Ntng1",
-                     "Ebf2", "Nefm", "Ttn", "Sox5", "Lhfp"), 
+        features = c("Slc17a6", "Slc17a7", "Gad1", "Gad2", "Schip1", "Fam19a1",  "Trhde",
+                     "Nfia", "Fbxl7", "Gpc3", "Foxp2", "Cpne9","Ebf2", "Stac2", "Zeb2", "Satb2", "Sox5", "Sema5a",
+                     "Nefm", "Ttn",  "Lhfp"), 
         group.by = "cell_type", stack = TRUE, flip = TRUE) + 
   scale_fill_manual(values = custom_colors) + NoLegend()
 
 
 
 # Generate UMAP plot with colored cluster annotations
-dim_plot <- DimPlot(combined_neurons_clean, reduction = 'umap', raster = FALSE, shuffle = TRUE, label = TRUE) + 
+dim_plot <- DimPlot(combined_neurons_clean, reduction = 'umap', raster = FALSE, shuffle = TRUE, label = FALSE) + 
   scale_color_manual(values = custom_colors) +  
   theme_bw() + 
   theme(legend.text = element_text(size = 14),  
@@ -606,6 +613,7 @@ PM_Neurons$cell_type [mapply(grepl, colnames(PM_Neurons), paste(colnames(subset(
 PM_Neurons$cell_type [mapply(grepl, colnames(PM_Neurons), paste(colnames(subset(combined_neurons_clean, subset = cell_type == c("Glut6"))), collapse = "|"))] <- "Glut6"
 PM_Neurons$cell_type [mapply(grepl, colnames(PM_Neurons), paste(colnames(subset(combined_neurons_clean, subset = cell_type == c("GABA6"))), collapse = "|"))] <- "GABA6"
 PM_Neurons$cell_type [mapply(grepl, colnames(PM_Neurons), paste(colnames(subset(combined_neurons_clean, subset = cell_type == c("Glut7"))), collapse = "|"))] <- "Glut7"
+PM_Neurons$cell_type [mapply(grepl, colnames(PM_Neurons), paste(colnames(subset(combined_neurons_clean, subset = cell_type == c("Glut8"))), collapse = "|"))] <- "Glut8"
 
 saveRDS(combined_neurons_clean, file= "GABA_Gluta.rds")
 
@@ -613,7 +621,7 @@ saveRDS(combined_neurons_clean, file= "GABA_Gluta.rds")
 clean_barcodes <- colnames(combined_neurons_clean)
 
 # Identify excitatory and inhibitory neurons in PM_Neurons
-excitatory_inhibitory_cells <- which(PM_Neurons$cell_type %in% c("Excitory neurons", "Inhibitory neurons"))
+excitatory_inhibitory_cells <- which(PM_Neurons$cell_type %in% c("Vglut1+ excitatory neurons", "Vglut2+ excitatory neurons", "Inhibitory neurons"))
 
 
 # Only update the annotations for the matching barcodes
@@ -638,13 +646,13 @@ Idents(PM_Neurons_clean) <- PM_Neurons_clean$cell_type
 # Define a custom color palette with more vibrant and distinct colors
 custom_colors <- c("GABA1" = "#1b9e77", "GABA2" = "#d95f02", "GABA3" = "#7570b3", 
                    "GABA4" = "#e7298a", "GABA5" = "#66a61e", "GABA6" = "#e6ab02",
-                   "Glut1" = "#a6761d", "Glut2" = "#666666", "Glut3" = "#1f78b4", 
+                   "Glut1" = "#a6761d", "Glut2" = "#4575b4", "Glut3" = "#1f78b4", 
                    "Glut4" = "#b2df8a", "Glut5" = "#33a02c", "Glut6" = "#fb9a99", 
                    "Glut7" = "#e31a1c",
-                   "Glutamatergic projection neurons" = "#d53e4f", "Cholinergic neurons" = "#ff7f00", 
+                   "Glut8" = "#d53e4f", "Cholinergic neurons" = "#ff7f00", 
                    "Erythrocytes" = "#6a3d9a", "Astro3" = "#8dd3c7", 
                    "Peptidergic neurons" = "#fdae61", "Myelinating glia" = "#b3de69", 
-                   "Purkinjie neurons_2" = "#bc80bd", "Collagen-enriched neurons" = "#ccebc5", 
+                   "Purkinje neurons_2" = "#bc80bd", "Collagen-enriched neurons" = "#ccebc5", 
                    "Cerebellar granule neurons" = "#ffed6f")
 
 
@@ -830,10 +838,10 @@ custom_colors <- c(
   "Glut1" = "#a6761d", "Glut2" = "#ccebc5", "Glut3" = "#1f78b4", 
   "Glut4" = "#b2df8a", "Glut5" = "#33a02c", "Glut6" = "#fb9a99", 
   "Glut7" = "#e31a1c",
-  "Glutamatergic projection neurons" = "#d53e4f", "Cholinergic neurons" = "#ff7f00", 
+  "Glut8" = "#d53e4f", "Cholinergic neurons" = "#ff7f00", 
   "Erythrocytes" = "#6a3d9a", "Astro3" = "#8dd3c7", 
   "Peptidergic neurons" = "#fdae61", "Myelinating glia" = "#b3de69", 
-  "Purkinjie neurons_2" = "#bc80bd",
+  "Purkinje neurons_2" = "#bc80bd",
   "Cerebellar granule neurons" = "#ffed6f",
   "Neu_1" = "#8c564b", "Neu_2" = "#9467bd", "Neu_3" = "#17becf", 
   "Neu_4" = "#d62728", "Neu_5" = "#2ca02c", "Neu_6" = "#ff7f0e"
@@ -868,6 +876,3 @@ ggsave(
 )
 
 saveRDS(cells_to_keep, file= "PM_Neurons_Level3.rds")
-
-
-##############################################################
